@@ -1,0 +1,42 @@
+{
+  "name": "@ebazdev/payment",
+  "version": "1.0.3",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "files": [
+    "build/**/*"
+  ],
+  "scripts": {
+    "clean:windows": "if exist .\\build rmdir /S /Q .\\build",
+    "clean-src:windows": "rmdir /S /Q .\\src && mkdir .\\src",
+    "build:windows": "npm run clean:windows && tsc",
+    "pub:windows": "npm version patch && npm run build:windows && npm publish",
+    "clean": "del ./build/*",
+    "clean-src": "del ./src/*",
+    "build": "npm run clean && tsc",
+    "pub": "npm version patch && npm run build && npm publish"
+  },
+  "keywords": [
+    "node",
+    "npm",
+    "ebazaar"
+  ],
+  "author": "NaNo",
+  "license": "ISC",
+  "description": "",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "del-cli": "^5.1.0",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
+    "http-status-codes": "^2.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.6.1",
+    "mongoose-update-if-current": "^1.4.0",
+    "typescript": "^5.5.4"
+  }
+}
