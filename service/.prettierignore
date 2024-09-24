@@ -1,0 +1,11 @@
+# Ignore the TypeScript configuration file
+tsconfig.json
+package.json
+package-lock.json
+ecosystem.config.js
+nats-wrapper.ts
+
+# You can also ignore other files or directories as needed
+node_modules/
+build/
+dist/

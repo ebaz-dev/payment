@@ -3,6 +3,10 @@ import { app } from "./app";
 import { natsWrapper } from "./nats-wrapper";
 
 const start = async () => {
+  if (!process.env.PORT) {
+    throw new Error("INDEX_PORT must be defined");
+  }
+
   if (!process.env.JWT_KEY) {
     throw new Error("JWT_KEY must be defined");
   }
@@ -29,10 +33,12 @@ const start = async () => {
       process.env.NATS_CLIENT_ID,
       process.env.NATS_URL
     );
+
     natsWrapper.client.on("close", () => {
       console.log("NATS connection closed!");
       process.exit();
     });
+
     process.on("SIGINT", () => natsWrapper.client.close());
     process.on("SIGTERM", () => natsWrapper.client.close());
 
@@ -42,9 +48,14 @@ const start = async () => {
     console.error(err);
   }
 
-  app.listen(3000, () => {
-    console.log("Listening on port 3000!!!!!!!!!!");
+  app.listen(process.env.PORT, () => {
+    console.log(`Listening on port ${process.env.PORT}!!!!!!!!!!`);
   });
 };
 
 start();
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
+});

@@ -77,3 +77,5 @@ router.get("/payment-status", async (req: Request, res: Response) => {
     return res.status(400).send("FAILURE");
   }
 });
+
+export { router as paymemntStatusRouter };

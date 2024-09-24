@@ -4,15 +4,12 @@ import { json } from "body-parser";
 import { errorHandler, NotFoundError, currentUser } from "@ebazdev/core";
 import cookieSession from "cookie-session";
 import { invoiceCreateRouter } from "./routes/invoice-create";
+import { paymemntStatusRouter } from "./routes/payment-status";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-if (!process.env.API_PREFIX) {
-  throw new Error("API_PREFIX must be defined");
-}
-
-const apiPrefix = process.env.API_PREFIX;
+const apiPrefix = "/api/v1/payment";
 
 const app = express();
 app.set("trust proxy", true);
@@ -26,6 +23,7 @@ app.use(
 
 app.use(currentUser);
 app.use(apiPrefix, invoiceCreateRouter);
+app.use(apiPrefix, paymemntStatusRouter);
 
 app.all("*", async () => {
   throw new NotFoundError();

@@ -138,18 +138,18 @@ router.post(
       invoiceRequest.thirdPartyInvoiceId = qpayInvoiceId;
       await invoiceRequest.save();
 
-      // new InvoiceCreatedPublisher(natsWrapper.client).publish({
-      //   id: invoice.id,
-      //   orderId: invoice.orderId.toString(),
-      //   supplierId: invoice.supplierId.toString(),
-      //   merchantId: invoice.merchantId.toString(),
-      //   status: invoice.status,
-      //   invoiceAmount: invoice.invoiceAmount,
-      //   thirdPartyInvoiceId: invoice.thirdPartyInvoiceId,
-      //   paymentMethod: invoice.paymentMethod,
-      // });
+      new InvoiceCreatedPublisher(natsWrapper.client).publish({
+        id: invoice.id,
+        orderId: invoice.orderId.toString(),
+        supplierId: invoice.supplierId.toString(),
+        merchantId: invoice.merchantId.toString(),
+        status: invoice.status,
+        invoiceAmount: invoice.invoiceAmount,
+        thirdPartyInvoiceId: invoice.thirdPartyInvoiceId,
+        paymentMethod: invoice.paymentMethod,
+      });
 
-      // await session.commitTransaction();
+      await session.commitTransaction();
 
       res.status(StatusCodes.CREATED).json({
         orderId: orderId,
