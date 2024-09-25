@@ -9,6 +9,9 @@ import axios, { AxiosRequestConfig } from "axios";
 const router = express.Router();
 
 router.get("/invoice-status", async (req: Request, res: Response) => {
+  console.log("checking req.query");
+  console.log(req.query);
+  console.log("**********************");
   const invoiceId = req.query.invoiceid;
 
   console.log("************************");
