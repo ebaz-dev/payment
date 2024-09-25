@@ -60,18 +60,16 @@ router.post(
       throw new BadRequestError("Qpay credentials are not provided");
     }
 
-    const invoiceNo = "EB_" + orderId;
-
     const invoiceRequest = new InvoiceRequest({
       orderId: orderId,
       status: InvoiceRequestStatus.Awaiting,
       paymentMethod: PaymentMethod.QPay,
       invoiceCode: process.env.QPAY_INVOICE_CODE,
-      senderInvoiceNo: invoiceNo,
+      senderInvoiceNo: orderId,
       invoiceReceiverCode: "terminal",
-      invoiceDescription: invoiceNo,
+      invoiceDescription: orderId,
       invoiceAmount: parseInt(amount, 10),
-      callBackUrl: process.env.QPAY_CALLBACK_URL + invoiceNo,
+      callBackUrl: process.env.QPAY_CALLBACK_URL + orderId,
     });
 
     try {
@@ -106,11 +104,11 @@ router.post(
 
       const data = {
         invoice_code: process.env.QPAY_INVOICE_CODE,
-        sender_invoice_no: invoiceNo,
+        sender_invoice_no: orderId,
         invoice_receiver_code: "terminal",
-        invoice_description: invoiceNo,
+        invoice_description: orderId,
         amount: parseInt(amount, 10),
-        callback_url: process.env.QPAY_CALLBACK_URL + invoiceNo,
+        callback_url: process.env.QPAY_CALLBACK_URL + orderId,
         date: new Date(),
       };
 

@@ -9,21 +9,19 @@ import axios, { AxiosRequestConfig } from "axios";
 const router = express.Router();
 
 router.get("/invoice-status", async (req: Request, res: Response) => {
-  const invoiceidSting = req.query.invoiceid;
+  const invoiceId = req.query.invoiceid;
 
   console.log("************************");
-  console.log(invoiceidSting);
+  console.log(invoiceId);
   console.log("******** invoice status **************");
 
-  if (!invoiceidSting || typeof invoiceidSting !== "string") {
+  if (!invoiceId || typeof invoiceId !== "string") {
     throw new BadRequestError("Invoice ID is required and must be a string");
   }
 
   if (!process.env.QPAY_PAYMENT_CHECK_URL) {
     throw new BadRequestError("Qpay payment check URL is not provided");
   }
-
-  const invoiceId = invoiceidSting.split("_")[1];
 
   console.log("*************************");
   console.log(invoiceId);
