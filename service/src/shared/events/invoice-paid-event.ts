@@ -9,7 +9,7 @@ export interface InvoicePaidEvent {
     merchantId: string;
     status: string;
     invoiceAmount: number;
-    paidAmount: string;
+    paidAmount: number;
     thirdPartyInvoiceId: string;
     paymentMethod: string;
   };

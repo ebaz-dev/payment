@@ -16,7 +16,7 @@ interface InvoiceDoc extends Document {
   merchantId: Types.ObjectId;
   status: InvoiceStatus;
   invoiceAmount: number;
-  paidAmount?: string;
+  paidAmount?: number;
   thirdPartyInvoiceId: string;
   invoiceToken: string;
   paymentMethod: PaymentMethod;
@@ -50,7 +50,7 @@ const invoiceSchema = new Schema<InvoiceDoc>(
       required: true,
     },
     paidAmount: {
-      type: String,
+      type: Number,
       required: false,
     },
     thirdPartyInvoiceId: {

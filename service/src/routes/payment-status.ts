@@ -47,12 +47,30 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
 
   try {
     const response = await axios(config);
-    console.log('QPAY RESPONSE');
-    console.log(response);
-    console.log('************************************');
+
+    if (response.status !== StatusCodes.OK) {
+      throw new BadRequestError("Qpay payment check failed");
+    }
 
     const responseData = response.data;
     const responseDetails = responseData.rows[0];
+
+    if (responseDetails.payment_status !== "PAID") {
+
+      invoice.set({
+        thirdPartyData: {
+          paymentId: responseDetails.payment_id,
+          status: responseDetails.payment_status,
+          currency: responseDetails.payment_currency,
+          paymentWallet: responseDetails.payment_wallet,
+          paymentType: responseDetails.payment_type,
+          transactionData: responseDetails.p2p_transactions,
+        },
+      })
+
+      return res.status(200).send("STATUS PENDING");
+
+    }
 
     invoice.set({
       status: InvoiceStatus.Paid,
@@ -76,7 +94,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
       merchantId: invoice.merchantId.toString(),
       status: invoice.status,
       invoiceAmount: invoice.invoiceAmount,
-      paidAmount: invoice.paidAmount || "",
+      paidAmount: invoice.paidAmount || 0,
       thirdPartyInvoiceId: invoice.thirdPartyInvoiceId,
       paymentMethod: invoice.paymentMethod,
     });
