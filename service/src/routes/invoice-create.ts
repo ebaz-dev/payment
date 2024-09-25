@@ -5,7 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import { Invoice } from "../shared/models/invoice";
 import { InvoiceRequest } from "../shared/models/invoice-request";
 import { InvoiceCreatedPublisher } from "../events/publisher/invoice-created-publisher";
-import { Cart } from "@ebazdev/order";
+import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
 import axios from "axios";
 import mongoose from "mongoose";
@@ -18,20 +18,22 @@ router.post(
     body("orderId")
       .isString()
       .notEmpty()
-      .withMessage("Card ID must be provided"),
+      .withMessage("Order ID must be provided"),
     body("amount")
       .isNumeric()
       .notEmpty()
-      .withMessage("Amount must be provided"),
+      .withMessage("Amount must be provided")
+      .custom((value) => value > 0)
+      .withMessage("Amount must be greater than 0"),
   ],
   validateRequest,
   async (req: Request, res: Response) => {
-    const { orderId, amount, paymentMethod } = req.body;
+    const { orderId, amount } = req.body;
 
-    const cart = await Cart.findById(orderId);
+    const order = await Order.findById(orderId);
 
-    if (!cart) {
-      throw new BadRequestError("Cart not found");
+    if (!order) {
+      throw new BadRequestError("Order not found");
     }
 
     const currentInvoice = await Invoice.findOne({ orderId: orderId });
@@ -40,12 +42,15 @@ router.post(
       throw new BadRequestError("Invoice already exists");
     }
 
+    const paymentMethod = "qpay";
+
     if (
       !process.env.QPAY_USERNAME ||
       !process.env.QPAY_PASSWORD ||
       !process.env.QPAY_INVOICE_CODE ||
       !process.env.QPAY_AUTH_TOKEN_URL ||
-      !process.env.QPAY_INVOICE_REQUEST_URL
+      !process.env.QPAY_INVOICE_REQUEST_URL ||
+      !process.env.QPAY_CALLBACK_URL
     ) {
       throw new BadRequestError("Qpay credentials are not provided");
     }
@@ -54,11 +59,11 @@ router.post(
       orderId: orderId,
       paymentMethod: paymentMethod,
       invoiceCode: process.env.QPAY_INVOICE_CODE,
-      senderInvoiceNo: "order" + orderId,
+      senderInvoiceNo: "order_" + orderId,
       invoiceReceiverCode: "terminal",
-      invoiceDescription: "order" + orderId,
+      invoiceDescription: "order_" + orderId,
       invoiceAmount: parseInt(amount, 10),
-      callBackUrl: process.env.QPAY_CALL_BACKURL + orderId,
+      callBackUrl: process.env.QPAY_CALLBACK_URL + orderId,
     });
 
     try {
@@ -93,11 +98,11 @@ router.post(
 
       const data = {
         invoice_code: process.env.QPAY_INVOICE_CODE,
-        sender_invoice_no: "order" + orderId,
+        sender_invoice_no: "order_" + orderId,
         invoice_receiver_code: "terminal",
-        invoice_description: "order" + orderId,
+        invoice_description: "order_" + orderId,
         amount: parseInt(amount, 10),
-        callback_url: process.env.QPAY_CALL_BACKURL + orderId,
+        callback_url: process.env.QPAY_CALLBACK_URL + orderId,
         date: new Date(),
       };
 
@@ -118,18 +123,25 @@ router.post(
         throw new BadRequestError("Failed to create invoice with QPAY");
       }
 
+      const qpayResponseStatus = qpayInvoiceResponse.status;
+
+      if (qpayResponseStatus !== 200) {
+        throw new BadRequestError("Failed to create invoice with QPAY");
+      }
+
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
 
       const invoice = new Invoice({
         orderId: orderId,
-        supplierId: cart.supplierId,
-        merchantId: cart.merchantId,
+        supplierId: order.supplierId,
+        merchantId: order.merchantId,
         status: "created",
         invoiceAmount: parseInt(amount, 10),
         thirdPartyInvoiceId: qpayInvoiceId,
         invoiceToken: qpayAccessToken,
         paymentMethod: paymentMethod,
+        thirdPartyData: qpayInvoiceResponseData
       });
 
       await invoice.save({ session });
@@ -139,10 +151,8 @@ router.post(
       await invoiceRequest.save();
 
       new InvoiceCreatedPublisher(natsWrapper.client).publish({
-        id: invoice.id,
+        id: invoice.id.toString(),
         orderId: invoice.orderId.toString(),
-        supplierId: invoice.supplierId.toString(),
-        merchantId: invoice.merchantId.toString(),
         status: invoice.status,
         invoiceAmount: invoice.invoiceAmount,
         thirdPartyInvoiceId: invoice.thirdPartyInvoiceId,
@@ -157,8 +167,10 @@ router.post(
         qr: qpayInvoiceResponseData.qr_text,
         qrImage: qpayInvoiceResponseData.qr_image,
       });
+
     } catch (error) {
       console.error(error);
+      await session.abortTransaction();
       res
         .status(StatusCodes.INTERNAL_SERVER_ERROR)
         .json({ error: "Something went wrong" });

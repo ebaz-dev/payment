@@ -2,7 +2,7 @@ import { Document, Schema, model, Types } from "mongoose";
 import { updateIfCurrentPlugin } from "mongoose-update-if-current";
 
 interface InvoiceRequestDoc extends Document {
-  cartId: Types.ObjectId;
+  orderId: Types.ObjectId;
   paymentMethod: string;
   invoiceCode: string;
   senderInvoiceNo: string;
@@ -16,7 +16,7 @@ interface InvoiceRequestDoc extends Document {
 
 const invoiceRequestSchema = new Schema<InvoiceRequestDoc>(
   {
-    cartId: {
+    orderId: {
       type: Schema.Types.ObjectId,
       required: true,
       ref: "Cart",
@@ -75,7 +75,7 @@ invoiceRequestSchema.set("versionKey", "version");
 invoiceRequestSchema.plugin(updateIfCurrentPlugin);
 
 const InvoiceRequest = model<InvoiceRequestDoc>(
-  "Payment",
+  "InvoiceRequest",
   invoiceRequestSchema
 );
 

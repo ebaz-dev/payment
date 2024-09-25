@@ -5,8 +5,6 @@ export interface InvoiceCreatedEvent {
   data: {
     id: string;
     orderId: string;
-    supplierId: string;
-    merchantId: string;
     status: string;
     invoiceAmount: number;
     thirdPartyInvoiceId: string;

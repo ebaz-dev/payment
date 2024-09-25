@@ -1,16 +1,7 @@
 import { Document, Schema, model, Types } from "mongoose";
 import { updateIfCurrentPlugin } from "mongoose-update-if-current";
 
-interface thirdPartyData {
-  paymentId?: string;
-  status?: string;
-  currency?: string;
-  paymentWallet?: string;
-  paymentType?: string;
-  transactionData?: object[];
-}
-
-interface IncoiceDoc extends Document {
+interface InvoiceDoc extends Document {
   id: Types.ObjectId;
   orderId: Types.ObjectId;
   supplierId: Types.ObjectId;
@@ -21,10 +12,10 @@ interface IncoiceDoc extends Document {
   thirdPartyInvoiceId: string;
   invoiceToken: string;
   paymentMethod: string;
-  thirdPartyData?: thirdPartyData;
+  thirdPartyData?: object;
 }
 
-const incoiceSchema = new Schema<IncoiceDoc>(
+const invoiceSchema = new Schema<InvoiceDoc>(
   {
     orderId: {
       type: Schema.Types.ObjectId,
@@ -64,30 +55,8 @@ const incoiceSchema = new Schema<IncoiceDoc>(
       required: true,
     },
     thirdPartyData: {
-      paymentId: {
-        type: String,
-        required: false,
-      },
-      status: {
-        type: String,
-        required: false,
-      },
-      currency: {
-        type: String,
-        required: false,
-      },
-      paymentWallet: {
-        type: String,
-        required: false,
-      },
-      paymentType: {
-        type: String,
-        required: false,
-      },
-      transactionData: {
-        type: Object,
-        required: false,
-      },
+      type: Object,
+      required: false,
     },
   },
   {
@@ -102,9 +71,9 @@ const incoiceSchema = new Schema<IncoiceDoc>(
   }
 );
 
-incoiceSchema.set("versionKey", "version");
-incoiceSchema.plugin(updateIfCurrentPlugin);
+invoiceSchema.set("versionKey", "version");
+invoiceSchema.plugin(updateIfCurrentPlugin);
 
-const Invoice = model<IncoiceDoc>("Invoice", incoiceSchema);
+const Invoice = model<InvoiceDoc>("Invoice", invoiceSchema);
 
 export { Invoice };

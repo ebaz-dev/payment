@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 
 const router = express.Router();
 
-router.get("/payment-status", async (req: Request, res: Response) => {
+router.get("/status", async (req: Request, res: Response) => {
   const invoiceid = req.query.invoiceid;
   // invoiceid gadnaas irsen huselt block hiij mgadgui ged validation hiisengui
 
