@@ -57,6 +57,10 @@ const invoiceSchema = new Schema<InvoiceDoc>(
       type: String,
       required: false,
     },
+    invoiceToken: {
+      type: String,
+      required: true,
+    },
     paymentMethod: {
       type: String,
       required: true,

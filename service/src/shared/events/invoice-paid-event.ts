@@ -5,6 +5,7 @@ export interface InvoicePaidEvent {
   data: {
     id: string;
     orderId: string;
+    supplierId: string;
     merchantId: string;
     status: string;
     invoiceAmount: number;

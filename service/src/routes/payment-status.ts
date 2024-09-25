@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import { BadRequestError, NotFoundError } from "@ebazdev/core";
 import { StatusCodes } from "http-status-codes";
-import { Invoice } from "../shared/models/invoice";
+import { Invoice, InvoiceStatus } from "../shared/models/invoice";
 import { InvoicePaidPublisher } from "../events/publisher/invoice-paid-publisher";
 import { natsWrapper } from "../nats-wrapper";
 import axios, { AxiosRequestConfig } from "axios";
@@ -9,15 +9,21 @@ import mongoose from "mongoose";
 
 const router = express.Router();
 
-router.get("/status", async (req: Request, res: Response) => {
-  const invoiceid = req.query.invoiceid;
-  // invoiceid gadnaas irsen huselt block hiij mgadgui ged validation hiisengui
+router.get("/invoice-status", async (req: Request, res: Response) => {
+
+  const invoiceidSting = req.query.invoiceid;
+
+  if (!invoiceidSting || typeof invoiceidSting !== 'string') {
+    throw new BadRequestError("Invoice ID is required and must be a string");
+  }
+
+  const invoiceId = invoiceidSting.split('_')[1];
 
   if (!process.env.QPAY_PAYMENT_CHECK_URL) {
     throw new BadRequestError("Qpay payment check url is not provided");
   }
 
-  const invoice = await Invoice.findOne({ orderId: invoiceid });
+  const invoice = await Invoice.findOne({ orderId: invoiceId });
 
   if (!invoice) {
     throw new NotFoundError();
@@ -41,12 +47,15 @@ router.get("/status", async (req: Request, res: Response) => {
 
   try {
     const response = await axios(config);
+    console.log('QPAY RESPONSE');
+    console.log(response);
+    console.log('************************************');
 
     const responseData = response.data;
     const responseDetails = responseData.rows[0];
 
     invoice.set({
-      status: "paid",
+      status: InvoiceStatus.Paid,
       paidAmount: responseData.paid_amount,
       thirdPartyData: {
         paymentId: responseDetails.payment_id,
@@ -61,8 +70,9 @@ router.get("/status", async (req: Request, res: Response) => {
     await invoice.save();
 
     await new InvoicePaidPublisher(natsWrapper.client).publish({
-      id: invoice.id,
+      id: invoice.id.toString(),
       orderId: invoice.orderId.toString(),
+      supplierId: invoice.supplierId.toString(),
       merchantId: invoice.merchantId.toString(),
       status: invoice.status,
       invoiceAmount: invoice.invoiceAmount,
