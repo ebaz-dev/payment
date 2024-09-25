@@ -2,8 +2,8 @@ import express, { Request, Response } from "express";
 import { body } from "express-validator";
 import { validateRequest, BadRequestError } from "@ebazdev/core";
 import { StatusCodes } from "http-status-codes";
-import { Invoice } from "../shared/models/invoice";
-import { InvoiceRequest } from "../shared/models/invoice-request";
+import { Invoice, InvoiceStatus, PaymentMethod } from "../shared/models/invoice";
+import { InvoiceRequest, InvoiceRequestStatus } from "../shared/models/invoice-request";
 import { InvoiceCreatedPublisher } from "../events/publisher/invoice-created-publisher";
 import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
@@ -42,8 +42,6 @@ router.post(
       throw new BadRequestError("Invoice already exists");
     }
 
-    const paymentMethod = "qpay";
-
     if (
       !process.env.QPAY_USERNAME ||
       !process.env.QPAY_PASSWORD ||
@@ -55,15 +53,18 @@ router.post(
       throw new BadRequestError("Qpay credentials are not provided");
     }
 
+    const invoiceNo = "EB_" + orderId;
+
     const invoiceRequest = new InvoiceRequest({
       orderId: orderId,
-      paymentMethod: paymentMethod,
+      status: InvoiceRequestStatus.Awaiting,
+      paymentMethod: PaymentMethod.QPay,
       invoiceCode: process.env.QPAY_INVOICE_CODE,
-      senderInvoiceNo: "order_" + orderId,
+      senderInvoiceNo: invoiceNo,
       invoiceReceiverCode: "terminal",
-      invoiceDescription: "order_" + orderId,
+      invoiceDescription: invoiceNo,
       invoiceAmount: parseInt(amount, 10),
-      callBackUrl: process.env.QPAY_CALLBACK_URL + orderId,
+      callBackUrl: process.env.QPAY_CALLBACK_URL + invoiceNo,
     });
 
     try {
@@ -98,11 +99,11 @@ router.post(
 
       const data = {
         invoice_code: process.env.QPAY_INVOICE_CODE,
-        sender_invoice_no: "order_" + orderId,
+        sender_invoice_no: invoiceNo,
         invoice_receiver_code: "terminal",
-        invoice_description: "order_" + orderId,
+        invoice_description: invoiceNo,
         amount: parseInt(amount, 10),
-        callback_url: process.env.QPAY_CALLBACK_URL + orderId,
+        callback_url: process.env.QPAY_CALLBACK_URL + invoiceNo,
         date: new Date(),
       };
 
@@ -129,6 +130,9 @@ router.post(
         throw new BadRequestError("Failed to create invoice with QPAY");
       }
 
+      invoiceRequest.status = InvoiceRequestStatus.Created;
+      await invoiceRequest.save()
+
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
 
@@ -136,11 +140,11 @@ router.post(
         orderId: orderId,
         supplierId: order.supplierId,
         merchantId: order.merchantId,
-        status: "created",
+        status: InvoiceStatus.Awaiting,
         invoiceAmount: parseInt(amount, 10),
         thirdPartyInvoiceId: qpayInvoiceId,
         invoiceToken: qpayAccessToken,
-        paymentMethod: paymentMethod,
+        paymentMethod: PaymentMethod.QPay,
         thirdPartyData: qpayInvoiceResponseData
       });
 

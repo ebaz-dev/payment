@@ -1,8 +1,14 @@
 import { Document, Schema, model, Types } from "mongoose";
 import { updateIfCurrentPlugin } from "mongoose-update-if-current";
 
+export enum InvoiceRequestStatus {
+  Awaiting = "awaiting",
+  Created = "created",
+}
+
 interface InvoiceRequestDoc extends Document {
   orderId: Types.ObjectId;
+  status: InvoiceRequestStatus;
   paymentMethod: string;
   invoiceCode: string;
   senderInvoiceNo: string;
@@ -20,6 +26,11 @@ const invoiceRequestSchema = new Schema<InvoiceRequestDoc>(
       type: Schema.Types.ObjectId,
       required: true,
       ref: "Cart",
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: Object.values(InvoiceRequestStatus),
     },
     paymentMethod: {
       type: String,

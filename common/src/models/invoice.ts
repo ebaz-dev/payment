@@ -1,17 +1,25 @@
 import { Document, Schema, model, Types } from "mongoose";
 import { updateIfCurrentPlugin } from "mongoose-update-if-current";
 
+export enum InvoiceStatus {
+  Awaiting = "awaiting",
+  Paid = "paid",
+}
+
+export enum PaymentMethod {
+  QPay = "qpay",
+}
 interface InvoiceDoc extends Document {
   id: Types.ObjectId;
   orderId: Types.ObjectId;
   supplierId: Types.ObjectId;
   merchantId: Types.ObjectId;
-  status: string;
+  status: InvoiceStatus;
   invoiceAmount: number;
   paidAmount?: string;
   thirdPartyInvoiceId: string;
   invoiceToken: string;
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   thirdPartyData?: object;
 }
 
@@ -34,8 +42,8 @@ const invoiceSchema = new Schema<InvoiceDoc>(
     },
     status: {
       type: String,
-      required: false,
-      default: "awaiting",
+      required: true,
+      enum: Object.values(InvoiceStatus),
     },
     invoiceAmount: {
       type: Number,
@@ -48,7 +56,6 @@ const invoiceSchema = new Schema<InvoiceDoc>(
     thirdPartyInvoiceId: {
       type: String,
       required: false,
-      ref: "Invoice",
     },
     paymentMethod: {
       type: String,
@@ -76,4 +83,4 @@ invoiceSchema.plugin(updateIfCurrentPlugin);
 
 const Invoice = model<InvoiceDoc>("Invoice", invoiceSchema);
 
-export { Invoice };
+export { Invoice, InvoiceDoc };
