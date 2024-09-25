@@ -9,26 +9,15 @@ import axios, { AxiosRequestConfig } from "axios";
 const router = express.Router();
 
 router.get("/invoice-status", async (req: Request, res: Response) => {
-  console.log("checking req.query");
-  console.log(req.query);
-  console.log("**********************");
   const invoiceId = req.query.invoice;
 
-  console.log("************************");
-  console.log(invoiceId);
-  console.log("******** invoice status **************");
-
   if (!invoiceId || typeof invoiceId !== "string") {
-    throw new BadRequestError("Invoice ID is required and must be a string");
+    return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
   }
 
   if (!process.env.QPAY_PAYMENT_CHECK_URL) {
     throw new BadRequestError("Qpay payment check URL is not provided");
   }
-
-  console.log("*************************");
-  console.log(invoiceId);
-  console.log("INVOICE ID");
 
   const invoice = await Invoice.findOne({ orderId: invoiceId });
 
@@ -56,14 +45,16 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     const response = await axios(config);
 
     if (response.status !== StatusCodes.OK) {
-      throw new BadRequestError("Qpay payment check failed");
+      return res
+        .status(StatusCodes.BAD_REQUEST)
+        .send("PAYMENT CHECK REQUEST FAILED");
     }
 
     const responseData = response.data;
     const responseDetails = responseData.rows[0];
 
     if (responseDetails.payment_status !== "PAID") {
-      return res.status(StatusCodes.OK).send("STATUS PENDING");
+      return res.status(StatusCodes.BAD_REQUEST).send("STATUS PENDING");
     }
 
     invoice.set({
