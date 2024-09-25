@@ -5,28 +5,34 @@ import { Invoice, InvoiceStatus } from "../shared/models/invoice";
 import { InvoicePaidPublisher } from "../events/publisher/invoice-paid-publisher";
 import { natsWrapper } from "../nats-wrapper";
 import axios, { AxiosRequestConfig } from "axios";
-import mongoose from "mongoose";
 
 const router = express.Router();
 
 router.get("/invoice-status", async (req: Request, res: Response) => {
-
   const invoiceidSting = req.query.invoiceid;
 
-  if (!invoiceidSting || typeof invoiceidSting !== 'string') {
+  console.log("************************");
+  console.log(invoiceidSting);
+  console.log("******** invoice status **************");
+
+  if (!invoiceidSting || typeof invoiceidSting !== "string") {
     throw new BadRequestError("Invoice ID is required and must be a string");
   }
 
-  const invoiceId = invoiceidSting.split('_')[1];
-
   if (!process.env.QPAY_PAYMENT_CHECK_URL) {
-    throw new BadRequestError("Qpay payment check url is not provided");
+    throw new BadRequestError("Qpay payment check URL is not provided");
   }
+
+  const invoiceId = invoiceidSting.split("_")[1];
+
+  console.log("*************************");
+  console.log(invoiceId);
+  console.log("INVOICE ID");
 
   const invoice = await Invoice.findOne({ orderId: invoiceId });
 
   if (!invoice) {
-    throw new NotFoundError();
+    return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
   }
 
   const data = {
@@ -56,20 +62,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     const responseDetails = responseData.rows[0];
 
     if (responseDetails.payment_status !== "PAID") {
-
-      invoice.set({
-        thirdPartyData: {
-          paymentId: responseDetails.payment_id,
-          status: responseDetails.payment_status,
-          currency: responseDetails.payment_currency,
-          paymentWallet: responseDetails.payment_wallet,
-          paymentType: responseDetails.payment_type,
-          transactionData: responseDetails.p2p_transactions,
-        },
-      })
-
-      return res.status(200).send("STATUS PENDING");
-
+      return res.status(StatusCodes.OK).send("STATUS PENDING");
     }
 
     invoice.set({
@@ -99,10 +92,10 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
       paymentMethod: invoice.paymentMethod,
     });
 
-    return res.status(200).send("SUCCESS");
+    return res.status(StatusCodes.OK).send("SUCCESS");
   } catch (error) {
     console.error("Error during payment status check:", error);
-    return res.status(400).send("FAILURE");
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("FAILURE");
   }
 });
 

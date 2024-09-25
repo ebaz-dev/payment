@@ -2,8 +2,15 @@ import express, { Request, Response } from "express";
 import { body } from "express-validator";
 import { validateRequest, BadRequestError } from "@ebazdev/core";
 import { StatusCodes } from "http-status-codes";
-import { Invoice, InvoiceStatus, PaymentMethod } from "../shared/models/invoice";
-import { InvoiceRequest, InvoiceRequestStatus } from "../shared/models/invoice-request";
+import {
+  Invoice,
+  InvoiceStatus,
+  PaymentMethod,
+} from "../shared/models/invoice";
+import {
+  InvoiceRequest,
+  InvoiceRequestStatus,
+} from "../shared/models/invoice-request";
 import { InvoiceCreatedPublisher } from "../events/publisher/invoice-created-publisher";
 import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
@@ -131,7 +138,7 @@ router.post(
       }
 
       invoiceRequest.status = InvoiceRequestStatus.Created;
-      await invoiceRequest.save()
+      await invoiceRequest.save();
 
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
@@ -145,7 +152,7 @@ router.post(
         thirdPartyInvoiceId: qpayInvoiceId,
         invoiceToken: qpayAccessToken,
         paymentMethod: PaymentMethod.QPay,
-        thirdPartyData: qpayInvoiceResponseData
+        thirdPartyData: qpayInvoiceResponseData,
       });
 
       await invoice.save({ session });
@@ -171,7 +178,6 @@ router.post(
         qr: qpayInvoiceResponseData.qr_text,
         qrImage: qpayInvoiceResponseData.qr_image,
       });
-
     } catch (error) {
       console.error(error);
       await session.abortTransaction();

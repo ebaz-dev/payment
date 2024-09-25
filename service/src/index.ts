@@ -27,6 +27,34 @@ const start = async () => {
     throw new Error("NATS_CLUSTER_ID must be defined");
   }
 
+  if (!process.env.QPAY_PAYMENT_CHECK_URL) {
+    throw new Error("QPAY_PAYMENT_CHECK_URL must be defined");
+  }
+
+  if (!process.env.QPAY_USERNAME) {
+    throw new Error("QPAY_USERNAME must be defined");
+  }
+
+  if (!process.env.QPAY_PASSWORD) {
+    throw new Error("QPAY_PASSWORD must be defined");
+  }
+
+  if (!process.env.QPAY_INVOICE_CODE) {
+    throw new Error("QPAY_INVOICE_CODE must be defined");
+  }
+
+  if (!process.env.QPAY_AUTH_TOKEN_URL) {
+    throw new Error("QPAY_AUTH_TOKEN_URL must be defined");
+  }
+
+  if (!process.env.QPAY_INVOICE_REQUEST_URL) {
+    throw new Error("QPAY_INVOICE_REQUEST_URL must be defined");
+  }
+
+  if (!process.env.QPAY_CALLBACK_URL) {
+    throw new Error("QPAY_CALLBACK_URL must be defined");
+  }
+
   try {
     await natsWrapper.connect(
       process.env.NATS_CLUSTER_ID,
