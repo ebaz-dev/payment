@@ -43,11 +43,11 @@ router.post(
       throw new BadRequestError("Order not found");
     }
 
-    const currentInvoice = await Invoice.findOne({ orderId: orderId });
+    // const currentInvoice = await Invoice.findOne({ orderId: orderId });
 
-    if (currentInvoice) {
-      throw new BadRequestError("Invoice already exists");
-    }
+    // if (currentInvoice) {
+    //   throw new BadRequestError("Invoice already exists");
+    // }
 
     if (
       !process.env.QPAY_USERNAME ||
