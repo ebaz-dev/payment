@@ -7,10 +7,7 @@ import {
   InvoiceStatus,
   PaymentMethod,
 } from "../shared/models/invoice";
-import {
-  InvoiceRequest,
-  InvoiceRequestStatus,
-} from "../shared/models/invoice-request";
+import { InvoiceRequest } from "../shared/models/invoice-request";
 import { InvoiceCreatedPublisher } from "../events/publisher/invoice-created-publisher";
 import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
@@ -23,15 +20,26 @@ router.post(
   "/invoice-create",
   [
     body("orderId")
-      .isString()
-      .notEmpty()
-      .withMessage("Order ID must be provided"),
+      .isMongoId()
+      .withMessage("Order ID must be a valid ObjectId"),
     body("amount")
       .isNumeric()
       .notEmpty()
       .withMessage("Amount must be provided")
       .custom((value) => value > 0)
       .withMessage("Amount must be greater than 0"),
+    body("paymentMethod")
+      .isString()
+      .notEmpty()
+      .withMessage("Payment method must be provided")
+      .custom((value) => {
+        return Object.values(PaymentMethod).includes(value);
+      })
+      .withMessage(
+        `Payment method must be one of ${Object.values(PaymentMethod).join(
+          ", "
+        )}`
+      ),
   ],
   validateRequest,
   async (req: Request, res: Response) => {
@@ -43,46 +51,34 @@ router.post(
       throw new BadRequestError("Order not found");
     }
 
-    // const currentInvoice = await Invoice.findOne({ orderId: orderId });
-
-    // if (currentInvoice) {
-    //   throw new BadRequestError("Invoice already exists");
-    // }
-
-    if (
-      !process.env.QPAY_USERNAME ||
-      !process.env.QPAY_PASSWORD ||
-      !process.env.QPAY_INVOICE_CODE ||
-      !process.env.QPAY_AUTH_TOKEN_URL ||
-      !process.env.QPAY_INVOICE_REQUEST_URL ||
-      !process.env.QPAY_CALLBACK_URL
-    ) {
-      throw new BadRequestError("Qpay credentials are not provided");
-    }
-
-    const invoiceRequest = new InvoiceRequest({
-      orderId: orderId,
-      status: InvoiceRequestStatus.Awaiting,
-      paymentMethod: PaymentMethod.QPay,
-      invoiceCode: process.env.QPAY_INVOICE_CODE,
-      senderInvoiceNo: orderId,
-      invoiceReceiverCode: "terminal",
-      invoiceDescription: orderId,
-      invoiceAmount: parseInt(amount, 10),
-      callBackUrl: process.env.QPAY_CALLBACK_URL + orderId,
-    });
-
-    try {
-      await invoiceRequest.save();
-    } catch (error) {
-      console.error("Error saving InvoiceRequest:", error);
-      throw new BadRequestError("Failed to save invoice request");
-    }
-
     const session = await mongoose.startSession();
     session.startTransaction();
 
+    if (
+      !process.env.QPAY_AUTH_TOKEN_URL ||
+      !process.env.QPAY_INVOICE_REQUEST_URL
+    ) {
+      throw new Error("Missing QPAY environment variables");
+    }
+
     try {
+      const invoiceAmount = parseInt(amount, 10);
+
+      const qpayInvoiceRequest = new InvoiceRequest({
+        orderId: orderId,
+        paymentMethod: PaymentMethod.QPay,
+        invoiceAmount: invoiceAmount,
+        additionalData: {
+          invoiceCode: process.env.QPAY_INVOICE_CODE,
+          senderInvoiceNo: orderId,
+          invoiceReceiverCode: "terminal",
+          invoiceDescription: orderId,
+          callBackUrl: process.env.QPAY_CALLBACK_URL + orderId,
+        },
+      });
+
+      await qpayInvoiceRequest.save({ session });
+
       let qpayAccessToken: string;
 
       try {
@@ -90,7 +86,11 @@ router.post(
         const encodedToken = Buffer.from(token).toString("base64");
         const headers = { Authorization: "Basic " + encodedToken };
 
-        const qpayAuthResponse = await axios.post(
+        interface QPayAuthResponse {
+          access_token: string;
+        }
+
+        const qpayAuthResponse = await axios.post<QPayAuthResponse>(
           process.env.QPAY_AUTH_TOKEN_URL,
           {},
           { headers }
@@ -98,21 +98,29 @@ router.post(
 
         qpayAccessToken = qpayAuthResponse.data.access_token;
       } catch (error) {
-        console.error("Error during QPAY authentication:", error);
+        if (axios.isAxiosError(error)) {
+          console.error(
+            "Error during QPAY authentication:",
+            error.response?.data || error.message
+          );
+        } else {
+          console.error("Unexpected error during QPAY authentication:", error);
+        }
+
         throw new BadRequestError("Failed to authenticate with QPAY");
       }
 
-      const data = {
+      const qpayRequestData = {
         invoice_code: process.env.QPAY_INVOICE_CODE,
         sender_invoice_no: orderId,
         invoice_receiver_code: "terminal",
         invoice_description: orderId,
-        amount: parseInt(amount, 10),
+        amount: invoiceAmount,
         callback_url: process.env.QPAY_CALLBACK_URL + orderId,
         date: new Date(),
       };
 
-      const config = {
+      const qpayConfig = {
         headers: { Authorization: `Bearer ${qpayAccessToken}` },
       };
 
@@ -121,51 +129,65 @@ router.post(
       try {
         qpayInvoiceResponse = await axios.post(
           process.env.QPAY_INVOICE_REQUEST_URL,
-          data,
-          config
+          qpayRequestData,
+          qpayConfig
         );
       } catch (error) {
-        console.error("Error during QPAY invoice request:", error);
+        if (axios.isAxiosError(error)) {
+          console.error(
+            "Error during QPAY invoice request:",
+            error.response?.data || error.message
+          );
+        } else {
+          console.error("Unexpected error:", error);
+        }
         throw new BadRequestError("Failed to create invoice with QPAY");
       }
 
       const qpayResponseStatus = qpayInvoiceResponse.status;
-
-      if (qpayResponseStatus !== 200) {
+      if (qpayResponseStatus !== StatusCodes.OK) {
         throw new BadRequestError("Failed to create invoice with QPAY");
       }
-
-      invoiceRequest.status = InvoiceRequestStatus.Created;
-      await invoiceRequest.save();
 
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
 
-      const invoice = new Invoice({
-        orderId: orderId,
-        supplierId: order.supplierId,
-        merchantId: order.merchantId,
-        status: InvoiceStatus.Awaiting,
-        invoiceAmount: parseInt(amount, 10),
-        thirdPartyInvoiceId: qpayInvoiceId,
-        invoiceToken: qpayAccessToken,
-        paymentMethod: PaymentMethod.QPay,
-        thirdPartyData: qpayInvoiceResponseData,
-      });
+      const mbankInvoice = createInvoice(
+        orderId,
+        order.supplierId,
+        order.merchantId,
+        invoiceAmount,
+        PaymentMethod.MBank
+      );
 
-      await invoice.save({ session });
+      const qpayInvoice = createInvoice(
+        orderId,
+        order.supplierId,
+        order.merchantId,
+        invoiceAmount,
+        PaymentMethod.QPay,
+        {
+          thirdPartyInvoiceId: qpayInvoiceId,
+          invoiceToken: qpayAccessToken,
+          thirdPartyData: qpayInvoiceResponseData,
+        }
+      );
 
-      invoiceRequest.invoiceId = invoice.id;
-      invoiceRequest.thirdPartyInvoiceId = qpayInvoiceId;
-      await invoiceRequest.save();
+      await mbankInvoice.save({ session });
+      await qpayInvoice.save({ session });
+
+      qpayInvoiceRequest.invoiceId = qpayInvoice.id;
+      qpayInvoiceRequest.additionalData.thirdPartyInvoiceId = qpayInvoiceId;
+
+      await qpayInvoiceRequest.save({ session });
 
       new InvoiceCreatedPublisher(natsWrapper.client).publish({
-        id: invoice.id.toString(),
-        orderId: invoice.orderId.toString(),
-        status: invoice.status,
-        invoiceAmount: invoice.invoiceAmount,
-        thirdPartyInvoiceId: invoice.thirdPartyInvoiceId,
-        paymentMethod: invoice.paymentMethod,
+        id: qpayInvoice.id.toString(),
+        orderId: qpayInvoice.orderId.toString(),
+        status: qpayInvoice.status,
+        invoiceAmount: qpayInvoice.invoiceAmount,
+        thirdPartyInvoiceId: qpayInvoice.additionalData.thirdPartyInvoiceId,
+        paymentMethod: qpayInvoice.paymentMethod,
       });
 
       await session.commitTransaction();
@@ -177,15 +199,54 @@ router.post(
         qrImage: qpayInvoiceResponseData.qr_image,
       });
     } catch (error) {
-      console.error(error);
       await session.abortTransaction();
-      res
-        .status(StatusCodes.INTERNAL_SERVER_ERROR)
-        .json({ error: "Something went wrong" });
+      if (error instanceof BadRequestError) {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
+      } else {
+        res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ error: "Something went wrong" });
+      }
     } finally {
       session.endSession();
     }
   }
 );
+
+const createInvoice = (
+  orderId: mongoose.Types.ObjectId,
+  supplierId: mongoose.Types.ObjectId,
+  merchantId: mongoose.Types.ObjectId,
+  invoiceAmount: number,
+  paymentMethod: PaymentMethod,
+  additionalData?: {
+    thirdPartyInvoiceId?: string;
+    invoiceToken?: string;
+    thirdPartyData?: any;
+  }
+) => {
+  const invoiceData: any = {
+    orderId,
+    supplierId,
+    merchantId,
+    status: InvoiceStatus.Awaiting,
+    invoiceAmount,
+    paymentMethod,
+  };
+
+  if (additionalData) {
+    if (additionalData.thirdPartyInvoiceId) {
+      invoiceData.thirdPartyInvoiceId = additionalData.thirdPartyInvoiceId;
+    }
+    if (additionalData.invoiceToken) {
+      invoiceData.invoiceToken = additionalData.invoiceToken;
+    }
+    if (additionalData.thirdPartyData) {
+      invoiceData.thirdPartyData = additionalData.thirdPartyData;
+    }
+  }
+
+  return new Invoice(invoiceData);
+};
 
 export { router as invoiceCreateRouter };

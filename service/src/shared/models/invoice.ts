@@ -8,6 +8,14 @@ export enum InvoiceStatus {
 
 export enum PaymentMethod {
   QPay = "qpay",
+  MBank = "mbank",
+  Cash = "cash",
+}
+
+interface AdditionalData {
+  thirdPartyInvoiceId?: string;
+  invoiceToken?: string;
+  thirdPartyData?: object;
 }
 interface InvoiceDoc extends Document {
   id: Types.ObjectId;
@@ -17,10 +25,8 @@ interface InvoiceDoc extends Document {
   status: InvoiceStatus;
   invoiceAmount: number;
   paidAmount?: number;
-  thirdPartyInvoiceId: string;
-  invoiceToken: string;
   paymentMethod: PaymentMethod;
-  thirdPartyData?: object;
+  additionalData: AdditionalData;
 }
 
 const invoiceSchema = new Schema<InvoiceDoc>(
@@ -53,19 +59,11 @@ const invoiceSchema = new Schema<InvoiceDoc>(
       type: Number,
       required: false,
     },
-    thirdPartyInvoiceId: {
-      type: String,
-      required: false,
-    },
-    invoiceToken: {
-      type: String,
-      required: true,
-    },
     paymentMethod: {
       type: String,
       required: true,
     },
-    thirdPartyData: {
+    additionalData: {
       type: Object,
       required: false,
     },

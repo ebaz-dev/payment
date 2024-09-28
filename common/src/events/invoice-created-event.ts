@@ -7,7 +7,7 @@ export interface InvoiceCreatedEvent {
     orderId: string;
     status: string;
     invoiceAmount: number;
-    thirdPartyInvoiceId: string;
+    thirdPartyInvoiceId?: string;
     paymentMethod: string;
   };
 }

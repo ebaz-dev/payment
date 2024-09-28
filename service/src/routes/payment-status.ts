@@ -1,7 +1,11 @@
 import express, { Request, Response } from "express";
 import { BadRequestError, NotFoundError } from "@ebazdev/core";
 import { StatusCodes } from "http-status-codes";
-import { Invoice, InvoiceStatus } from "../shared/models/invoice";
+import {
+  Invoice,
+  InvoiceStatus,
+  PaymentMethod,
+} from "../shared/models/invoice";
 import { InvoicePaidPublisher } from "../events/publisher/invoice-paid-publisher";
 import { natsWrapper } from "../nats-wrapper";
 import axios, { AxiosRequestConfig } from "axios";
@@ -19,7 +23,10 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     throw new BadRequestError("Qpay payment check URL is not provided");
   }
 
-  const invoice = await Invoice.findOne({ orderId: invoiceId });
+  const invoice = await Invoice.findOne({
+    orderId: invoiceId,
+    paymentMethod: PaymentMethod.QPay,
+  });
 
   if (!invoice) {
     return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
@@ -27,7 +34,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
 
   const data = {
     object_type: "INVOICE",
-    object_id: invoice.thirdPartyInvoiceId,
+    object_id: invoice.additionalData.thirdPartyInvoiceId,
     offset: {
       page_number: 1,
       page_limit: 100,
@@ -37,7 +44,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
   const config: AxiosRequestConfig = {
     method: "post",
     url: process.env.QPAY_PAYMENT_CHECK_URL,
-    headers: { Authorization: `Bearer ${invoice.invoiceToken}` },
+    headers: { Authorization: `Bearer ${invoice.additionalData.invoiceToken}` },
     data: data,
   };
 
@@ -57,16 +64,21 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
       return res.status(StatusCodes.BAD_REQUEST).send("STATUS PENDING");
     }
 
+    const thirdPartyData = {
+      paymentId: responseDetails.payment_id,
+      status: responseDetails.payment_status,
+      currency: responseDetails.payment_currency,
+      paymentWallet: responseDetails.payment_wallet,
+      paymentType: responseDetails.payment_type,
+      transactionData: responseDetails.p2p_transactions,
+    };
+
     invoice.set({
       status: InvoiceStatus.Paid,
       paidAmount: responseData.paid_amount,
-      thirdPartyData: {
-        paymentId: responseDetails.payment_id,
-        status: responseDetails.payment_status,
-        currency: responseDetails.payment_currency,
-        paymentWallet: responseDetails.payment_wallet,
-        paymentType: responseDetails.payment_type,
-        transactionData: responseDetails.p2p_transactions,
+      additionalData: {
+        ...invoice.additionalData,
+        thirdPartyData: thirdPartyData,
       },
     });
 
@@ -80,7 +92,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
       status: invoice.status,
       invoiceAmount: invoice.invoiceAmount,
       paidAmount: invoice.paidAmount || 0,
-      thirdPartyInvoiceId: invoice.thirdPartyInvoiceId,
+      thirdPartyInvoiceId: invoice.additionalData.thirdPartyInvoiceId || "",
       paymentMethod: invoice.paymentMethod,
     });
 

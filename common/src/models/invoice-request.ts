@@ -1,23 +1,22 @@
 import { Document, Schema, model, Types } from "mongoose";
 import { updateIfCurrentPlugin } from "mongoose-update-if-current";
 
-export enum InvoiceRequestStatus {
-  Awaiting = "awaiting",
-  Created = "created",
+interface AdditionalData {
+  invoiceCode?: string;
+  senderInvoiceNo?: string;
+  invoiceReceiverCode?: string;
+  invoiceDescription?: string;
+  thirdPartyInvoiceId?: string;
+  callBackUrl?: string;
+  invoiceToken?: string;
 }
 
 interface InvoiceRequestDoc extends Document {
   orderId: Types.ObjectId;
-  status: InvoiceRequestStatus;
   paymentMethod: string;
-  invoiceCode: string;
-  senderInvoiceNo: string;
-  invoiceReceiverCode: string;
-  invoiceDescription: string;
   invoiceAmount: number;
-  callBackUrl: string;
-  invoiceId: Types.ObjectId;
-  thirdPartyInvoiceId: string;
+  invoiceId?: Types.ObjectId;
+  additionalData: AdditionalData;
 }
 
 const invoiceRequestSchema = new Schema<InvoiceRequestDoc>(
@@ -27,28 +26,7 @@ const invoiceRequestSchema = new Schema<InvoiceRequestDoc>(
       required: true,
       ref: "Cart",
     },
-    status: {
-      type: String,
-      required: true,
-      enum: Object.values(InvoiceRequestStatus),
-    },
     paymentMethod: {
-      type: String,
-      required: true,
-    },
-    invoiceCode: {
-      type: String,
-      required: true,
-    },
-    senderInvoiceNo: {
-      type: String,
-      required: true,
-    },
-    invoiceReceiverCode: {
-      type: String,
-      required: true,
-    },
-    invoiceDescription: {
       type: String,
       required: true,
     },
@@ -56,18 +34,40 @@ const invoiceRequestSchema = new Schema<InvoiceRequestDoc>(
       type: Number,
       required: true,
     },
-    callBackUrl: {
-      type: String,
-      required: true,
-    },
     invoiceId: {
       type: Schema.Types.ObjectId,
       required: false,
       ref: "Invoice",
     },
-    thirdPartyInvoiceId: {
-      type: String,
-      required: false,
+    additionalData: {
+      invoiceCode: {
+        type: String,
+        required: false,
+      },
+      senderInvoiceNo: {
+        type: String,
+        required: false,
+      },
+      invoiceReceiverCode: {
+        type: String,
+        required: false,
+      },
+      invoiceDescription: {
+        type: String,
+        required: false,
+      },
+      thirdPartyInvoiceId: {
+        type: String,
+        required: false,
+      },
+      callBackUrl: {
+        type: String,
+        required: false,
+      },
+      invoiceToken: {
+        type: String,
+        required: false,
+      },
     },
   },
   {

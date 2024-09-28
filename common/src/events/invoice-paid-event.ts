@@ -10,7 +10,7 @@ export interface InvoicePaidEvent {
     status: string;
     invoiceAmount: number;
     paidAmount: number;
-    thirdPartyInvoiceId: string;
+    thirdPartyInvoiceId?: string;
     paymentMethod: string;
   };
 }
