@@ -29,17 +29,14 @@ router.post(
       .custom((value) => value > 0)
       .withMessage("Amount must be greater than 0"),
     body("paymentMethod")
-      .isString()
-      .notEmpty()
-      .withMessage("Payment method must be provided")
-      .custom((value) => {
-        return Object.values(PaymentMethod).includes(value);
+      .isArray({ min: 1 })
+      .withMessage("Payment method must be an array of strings")
+      .custom((methods) => {
+        return methods.every((method: string) =>
+          ["qpay", "mbank", "cash"].includes(method)
+        );
       })
-      .withMessage(
-        `Payment method must be one of ${Object.values(PaymentMethod).join(
-          ", "
-        )}`
-      ),
+      .withMessage('Each payment method must be one of "qpay", "mbank", "cash'),
   ],
   validateRequest,
   async (req: Request, res: Response) => {
