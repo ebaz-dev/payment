@@ -149,26 +149,28 @@ router.post(
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
 
-      const mbankInvoice = createInvoice(
+      const mbankInvoice = new Invoice({
         orderId,
-        order.supplierId,
-        order.merchantId,
+        supplierId: order.supplierId,
+        merchantId: order.merchantId,
+        status: InvoiceStatus.Awaiting,
         invoiceAmount,
-        PaymentMethod.MBank
-      );
+        paymentMethod: PaymentMethod.MBank,
+      });
 
-      const qpayInvoice = createInvoice(
+      const qpayInvoice = new Invoice({
         orderId,
-        order.supplierId,
-        order.merchantId,
+        supplierId: order.supplierId,
+        merchantId: order.merchantId,
+        status: InvoiceStatus.Awaiting,
         invoiceAmount,
-        PaymentMethod.QPay,
-        {
+        paymentMethod: PaymentMethod.QPay,
+        additionalData: {
           thirdPartyInvoiceId: qpayInvoiceId,
           invoiceToken: qpayAccessToken,
           thirdPartyData: qpayInvoiceResponseData,
-        }
-      );
+        },
+      });
 
       await mbankInvoice.save({ session });
       await qpayInvoice.save({ session });
@@ -200,6 +202,7 @@ router.post(
       if (error instanceof BadRequestError) {
         res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
       } else {
+        console.error("Iinvoice requesting error:", error);
         res
           .status(StatusCodes.INTERNAL_SERVER_ERROR)
           .json({ error: "Something went wrong" });
@@ -209,41 +212,5 @@ router.post(
     }
   }
 );
-
-const createInvoice = (
-  orderId: mongoose.Types.ObjectId,
-  supplierId: mongoose.Types.ObjectId,
-  merchantId: mongoose.Types.ObjectId,
-  invoiceAmount: number,
-  paymentMethod: PaymentMethod,
-  additionalData?: {
-    thirdPartyInvoiceId?: string;
-    invoiceToken?: string;
-    thirdPartyData?: any;
-  }
-) => {
-  const invoiceData: any = {
-    orderId,
-    supplierId,
-    merchantId,
-    status: InvoiceStatus.Awaiting,
-    invoiceAmount,
-    paymentMethod,
-  };
-
-  if (additionalData) {
-    if (additionalData.thirdPartyInvoiceId) {
-      invoiceData.thirdPartyInvoiceId = additionalData.thirdPartyInvoiceId;
-    }
-    if (additionalData.invoiceToken) {
-      invoiceData.invoiceToken = additionalData.invoiceToken;
-    }
-    if (additionalData.thirdPartyData) {
-      invoiceData.thirdPartyData = additionalData.thirdPartyData;
-    }
-  }
-
-  return new Invoice(invoiceData);
-};
 
 export { router as invoiceCreateRouter };
