@@ -37,6 +37,20 @@ spec:
               value: '3000'
             - name: NODE_ENV
               value: 'development'
+            - name: QPAY_USERNAME
+              value: 'EBAZAAR'
+            - name: QPAY_PASSWORD
+              value: 'My7ZkVHq'
+            - name: QPAY_INVOICE_CODE
+              value: 'EBAZAAR_INVOICE'
+            - name: QPAY_AUTH_TOKEN_URL
+              value: 'https://merchant.qpay.mn/v2/auth/token'
+            - name: QPAY_INVOICE_REQUEST_URL
+              value: 'https://merchant.qpay.mn/v2/invoice'
+            - name: QPAY_PAYMENT_CHECK_URL
+              value: 'https://merchant.qpay.mn/v2/payment/check'
+            - name: QPAY_CALLBACK_URL
+              value: 'https://apidev-pro.ebazaar.mn/api/v1/payment/invoice-status?invoice='
           readinessProbe:
             httpGet:
               path: /api/v1/payment/health
