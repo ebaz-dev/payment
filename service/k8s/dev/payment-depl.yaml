@@ -50,7 +50,7 @@ spec:
             - name: QPAY_PAYMENT_CHECK_URL
               value: 'https://merchant.qpay.mn/v2/payment/check'
             - name: QPAY_CALLBACK_URL
-              value: 'https://apidev-pro.ebazaar.mn/api/v1/payment/invoice-status?invoice='
+              value: 'https://k8sapi-dev.ebazaar.mn/api/v1/payment/invoice-status?invoice='
           readinessProbe:
             httpGet:
               path: /api/v1/payment/health
