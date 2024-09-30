@@ -6,6 +6,7 @@ import cookieSession from "cookie-session";
 import { invoiceCreateRouter } from "./routes/invoice-create";
 import { paymemntStatusRouter } from "./routes/payment-status";
 import dotenv from "dotenv";
+import { healthRouter } from "./routes/health";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(
 );
 
 app.use(currentUser);
+app.use(apiPrefix, healthRouter);
 app.use(apiPrefix, invoiceCreateRouter);
 app.use(apiPrefix, paymemntStatusRouter);
 

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec: 
+      containers:
+        - name: payment
+          image: ebazdev/payment:latest
+          imagePullPolicy: Always
+          env:
+            - name: MONGO_URI
+              value: 'mongodb://ebaz-dev:774CPXo65J8i@103.229.178.57:27017/ebaz-dev?directConnection=true'
+            - name: JWT_KEY
+              value: '279112db517a6fadbfbb53500ee5e142a9036f1c972739e895c0d3ff7aa84af3'
+            - name: NATS_URL
+              value: 'http://nats-srv:4222'
+            - name: NATS_CLUSTER_ID
+              value: 'ebazaar_dev'
+            - name: NATS_USER
+              value: 'nats_dev'
+            - name: NATS_PASS
+              value: 'NaTs@Dev$EBaz'
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name 
+            - name: PORT
+              value: '3000'
+            - name: NODE_ENV
+              value: 'development'
+          readinessProbe:
+            httpGet:
+              path: /api/v1/payment/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/payment/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-srv
+spec:
+  selector:
+    app: payment
+  ports:
+    - name: payment
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
