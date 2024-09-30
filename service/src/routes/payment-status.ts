@@ -19,9 +19,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
   }
 
-  if (!process.env.QPAY_PAYMENT_CHECK_URL) {
-    throw new BadRequestError("Qpay payment check URL is not provided");
-  }
+  const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
 
   const invoice = await Invoice.findOne({
     orderId: invoiceId,
@@ -43,7 +41,7 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
 
   const config: AxiosRequestConfig = {
     method: "post",
-    url: process.env.QPAY_PAYMENT_CHECK_URL,
+    url: QPAY_PAYMENT_CHECK_URL,
     headers: { Authorization: `Bearer ${invoice.additionalData.invoiceToken}` },
     data: data,
   };

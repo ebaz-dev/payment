@@ -70,7 +70,7 @@ router.post(
           senderInvoiceNo: orderId,
           invoiceReceiverCode: "terminal",
           invoiceDescription: orderId,
-          callBackUrl: process.env.QPAY_CALLBACK_URL + orderId,
+          callBackUrl: "https://k8sapi-dev.ebazaar.mn/api/v1/payment/invoice-status?invoice=" + orderId,
         },
       });
 
