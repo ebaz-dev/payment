@@ -58,9 +58,13 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     const responseData = response.data;
     const responseDetails = responseData.rows[0];
 
-    if (responseDetails.payment_status !== "PAID") {
-      return res.status(StatusCodes.BAD_REQUEST).send("STATUS PENDING");
-    }
+    console.log('aaaaaaaaaaaaaaaaaaaaa');
+    console.log(responseDetails);
+    console.log('aaaaaaaaaaaaaaaaaaaaa');
+
+    // if (responseDetails.payment_status !== "PAID") {
+    //   return res.status(StatusCodes.BAD_REQUEST).send("STATUS PENDING");
+    // }
 
     const thirdPartyData = {
       paymentId: responseDetails.payment_id,
