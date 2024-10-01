@@ -51,12 +51,21 @@ router.post(
     const session = await mongoose.startSession();
     session.startTransaction();
 
-    if (
-      !process.env.QPAY_AUTH_TOKEN_URL ||
-      !process.env.QPAY_INVOICE_REQUEST_URL
-    ) {
-      throw new Error("Missing QPAY environment variables");
-    }
+    const QPAY_USERNAME = "EBAZAAR"
+    const QPAY_PASSWORD = "My7ZkVHq"
+    const QPAY_INVOICE_CODE = "EBAZAAR_INVOICE"
+    const QPAY_AUTH_TOKEN_URL = "https://merchant.qpay.mn/v2/auth/token"
+    const QPAY_INVOICE_REQUEST_URL = "https://merchant.qpay.mn/v2/invoice"
+    const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
+
+    const QPAY_CALLBACK_URL = "https://k8sapi-dev.ebazaar.mn/api/v1/payment/invoice-status?invoice="
+
+    // if (
+    //   !process.env.QPAY_AUTH_TOKEN_URL ||
+    //   !process.env.QPAY_INVOICE_REQUEST_URL
+    // ) {
+    //   throw new Error("Missing QPAY environment variables");
+    // }
 
     try {
       const invoiceAmount = parseInt(amount, 10);
@@ -66,7 +75,7 @@ router.post(
         paymentMethod: PaymentMethod.QPay,
         invoiceAmount: invoiceAmount,
         additionalData: {
-          invoiceCode: process.env.QPAY_INVOICE_CODE,
+          invoiceCode: QPAY_INVOICE_CODE,
           senderInvoiceNo: orderId,
           invoiceReceiverCode: "terminal",
           invoiceDescription: orderId,
@@ -79,7 +88,8 @@ router.post(
       let qpayAccessToken: string;
 
       try {
-        const token = `${process.env.QPAY_USERNAME}:${process.env.QPAY_PASSWORD}`;
+        // const token = `${process.env.QPAY_USERNAME}:${process.env.QPAY_PASSWORD}`;
+        const token = `${QPAY_USERNAME}:${QPAY_PASSWORD}`;
         const encodedToken = Buffer.from(token).toString("base64");
         const headers = { Authorization: "Basic " + encodedToken };
 
@@ -88,7 +98,7 @@ router.post(
         }
 
         const qpayAuthResponse = await axios.post<QPayAuthResponse>(
-          process.env.QPAY_AUTH_TOKEN_URL,
+          QPAY_AUTH_TOKEN_URL,
           {},
           { headers }
         );
@@ -125,7 +135,7 @@ router.post(
 
       try {
         qpayInvoiceResponse = await axios.post(
-          process.env.QPAY_INVOICE_REQUEST_URL,
+          QPAY_INVOICE_REQUEST_URL,
           qpayRequestData,
           qpayConfig
         );
