@@ -15,21 +15,21 @@ const router = express.Router();
 router.get("/invoice-status", async (req: Request, res: Response) => {
   const invoiceId = req.query.invoice;
 
-  if (!invoiceId || typeof invoiceId !== "string") {
-    return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
-  }
+  // if (!invoiceId || typeof invoiceId !== "string") {
+  //   return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
+  // }
 
   const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
 
   const invoice = await Invoice.findOne({
-    orderId: invoiceId,
+    "additionalData.thirdPartyInvoiceId": invoiceId,
     paymentMethod: PaymentMethod.QPay,
   });
 
   if (!invoice) {
     return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
   }
-
+  // console.log(invoice.additionalData);
   const data = {
     object_type: "INVOICE",
     object_id: invoice.additionalData.thirdPartyInvoiceId,
@@ -41,14 +41,14 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
 
   const config: AxiosRequestConfig = {
     method: "post",
-    url: QPAY_PAYMENT_CHECK_URL,
+    url: "https://merchant.qpay.mn/v2/payment/check",
     headers: { Authorization: `Bearer ${invoice.additionalData.invoiceToken}` },
     data: data,
   };
 
   try {
     const response = await axios(config);
-
+    // console.log(response.data);
     if (response.status !== StatusCodes.OK) {
       return res
         .status(StatusCodes.BAD_REQUEST)
@@ -58,9 +58,12 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     const responseData = response.data;
     const responseDetails = responseData.rows[0];
 
-    console.log('aaaaaaaaaaaaaaaaaaaaa');
-    console.log(responseDetails);
-    console.log('aaaaaaaaaaaaaaaaaaaaa');
+    // console.log('aaaaaaaaaaaaaaaaaaaaa');
+    // console.log(responseDetails);
+    // console.log('aaaaaaaaaaaaaaaaaaaaa');
+    if (!responseDetails) {
+      return res.status(StatusCodes.BAD_REQUEST).send("NO PAYMENT DETAILS");
+    }
 
     // if (responseDetails.payment_status !== "PAID") {
     //   return res.status(StatusCodes.BAD_REQUEST).send("STATUS PENDING");
