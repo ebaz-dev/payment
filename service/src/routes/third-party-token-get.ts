@@ -19,7 +19,6 @@ router.get("/qpay/token", async (req: Request, res: Response) => {
     const encodedToken = Buffer.from(token).toString("base64");
     const headers = { Authorization: "Basic " + encodedToken };
 
-    console.log('replacing token');
     interface QPayAuthResponse {
       access_token: string;
     }
@@ -35,7 +34,7 @@ router.get("/qpay/token", async (req: Request, res: Response) => {
     const existingToken = await ThirdPartyExternalData.findOne({
       origin: PaymentThirdPartyOrigin.QPay,
     });
-    console.log('CHECKING TOKEN UPDATE');
+
     if (existingToken) {
       existingToken.token = qpayAccessToken;
       await existingToken.save();

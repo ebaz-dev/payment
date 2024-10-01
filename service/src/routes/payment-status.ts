@@ -42,14 +42,8 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     data: data,
   };
 
-  console.log("----------------------------------------------");
-  console.log(config);
-  console.log("----------------------------------------------");
   try {
     const response = await axios(config);
-    console.log("RESPONSE DATA");
-    console.log(response.data);
-    console.log("RESPONSE DATA");
 
     if (response.status !== StatusCodes.OK) {
       return res
@@ -60,16 +54,9 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
     const responseData = response.data;
     const responseDetails = responseData.rows[0];
 
-    // console.log('aaaaaaaaaaaaaaaaaaaaa');
-    // console.log(responseDetails);
-    // console.log('aaaaaaaaaaaaaaaaaaaaa');
     if (!responseDetails) {
       return res.status(StatusCodes.BAD_REQUEST).send("NO PAYMENT DETAILS");
     }
-
-    // if (responseDetails.payment_status !== "PAID") {
-    //   return res.status(StatusCodes.BAD_REQUEST).send("STATUS PENDING");
-    // }
 
     const thirdPartyData = {
       paymentId: responseDetails.payment_id,
