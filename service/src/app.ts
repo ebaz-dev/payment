@@ -37,7 +37,7 @@ app.all("*", async () => {
 
 app.use(errorHandler);
 
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   try {
     console.log("Running scheduled task to update QPay token");
     await axios.get("http://localhost:3000/api/v1/payment/qpay/token");
