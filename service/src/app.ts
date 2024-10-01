@@ -40,7 +40,7 @@ app.use(errorHandler);
 cron.schedule("*/10 * * * *", async () => {
   try {
     console.log("Running scheduled task to update QPay token");
-    await axios.get(`http://localhost:3000${apiPrefix}/qpay/token`);
+    await axios.get(`https://k8sapi-dev.ebazaar.mn/api/v1/payment/qpay/token`);
     console.log("QPay token updated successfully");
   } catch (error) {
     console.error("Error updating QPay token:", error);
