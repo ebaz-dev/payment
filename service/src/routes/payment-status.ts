@@ -14,11 +14,8 @@ const router = express.Router();
 
 router.get("/invoice-status", async (req: Request, res: Response) => {
   const invoiceId = req.query.invoice;
-  console.log('***********************************');
-  console.log(invoiceId);
-  console.log('***********************************');
 
-  const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
+  const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check";
 
   const invoice = await Invoice.findOne({
     orderId: invoiceId,
@@ -50,9 +47,9 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
   console.log("----------------------------------------------");
   try {
     const response = await axios(config);
-    console.log('RESPONSE DATA');
+    console.log("RESPONSE DATA");
     console.log(response.data);
-    console.log('RESPONSE DATA');
+    console.log("RESPONSE DATA");
 
     if (response.status !== StatusCodes.OK) {
       return res

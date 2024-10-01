@@ -9,6 +9,10 @@ import {
 } from "../shared/models/invoice";
 import { InvoiceRequest } from "../shared/models/invoice-request";
 import { InvoiceCreatedPublisher } from "../events/publisher/invoice-created-publisher";
+import {
+  ThirdPartyExternalData,
+  PaymentThirdPartyOrigin,
+} from "../shared/models/third-party-token";
 import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
 import axios from "axios";
@@ -51,21 +55,9 @@ router.post(
     const session = await mongoose.startSession();
     session.startTransaction();
 
-    const QPAY_USERNAME = "EBAZAAR"
-    const QPAY_PASSWORD = "My7ZkVHq"
-    const QPAY_INVOICE_CODE = "EBAZAAR_INVOICE"
-    const QPAY_AUTH_TOKEN_URL = "https://merchant.qpay.mn/v2/auth/token"
-    const QPAY_INVOICE_REQUEST_URL = "https://merchant.qpay.mn/v2/invoice"
-    const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
-
-    const QPAY_CALLBACK_URL = "https://k8sapi-dev.ebazaar.mn/api/v1/payment/invoice-status?invoice="
-
-    // if (
-    //   !process.env.QPAY_AUTH_TOKEN_URL ||
-    //   !process.env.QPAY_INVOICE_REQUEST_URL
-    // ) {
-    //   throw new Error("Missing QPAY environment variables");
-    // }
+    const QPAY_INVOICE_CODE = process.env.QPAY_INVOICE_CODE!;
+    const QPAY_INVOICE_REQUEST_URL = process.env.QPAY_INVOICE_REQUEST_URL!;
+    const QPAY_CALLBACK_URL = process.env.QPAY_CALLBACK_URL!;
 
     try {
       const invoiceAmount = parseInt(amount, 10);
@@ -79,42 +71,20 @@ router.post(
           senderInvoiceNo: orderId,
           invoiceReceiverCode: "terminal",
           invoiceDescription: orderId,
-          callBackUrl: "https://k8sapi-dev.ebazaar.mn/api/v1/payment/invoice-status?invoice=" + orderId,
+          callBackUrl: QPAY_CALLBACK_URL + orderId,
         },
       });
 
       await qpayInvoiceRequest.save({ session });
 
-      let qpayAccessToken: string;
+      const qpayAccessTokenData = await ThirdPartyExternalData.findOne({
+        origin: PaymentThirdPartyOrigin.QPay,
+      });
 
-      try {
-        // const token = `${process.env.QPAY_USERNAME}:${process.env.QPAY_PASSWORD}`;
-        const token = `${QPAY_USERNAME}:${QPAY_PASSWORD}`;
-        const encodedToken = Buffer.from(token).toString("base64");
-        const headers = { Authorization: "Basic " + encodedToken };
+      const accessToken = qpayAccessTokenData?.token;
 
-        interface QPayAuthResponse {
-          access_token: string;
-        }
-
-        const qpayAuthResponse = await axios.post<QPayAuthResponse>(
-          QPAY_AUTH_TOKEN_URL,
-          {},
-          { headers }
-        );
-
-        qpayAccessToken = qpayAuthResponse.data.access_token;
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error(
-            "Error during QPAY authentication:",
-            error.response?.data || error.message
-          );
-        } else {
-          console.error("Unexpected error during QPAY authentication:", error);
-        }
-
-        throw new BadRequestError("Failed to authenticate with QPAY");
+      if (!accessToken) {
+        throw new BadRequestError("QPay access token not found");
       }
 
       const qpayRequestData = {
@@ -123,12 +93,12 @@ router.post(
         invoice_receiver_code: "terminal",
         invoice_description: orderId,
         amount: invoiceAmount,
-        callback_url: process.env.QPAY_CALLBACK_URL + orderId,
+        callback_url: QPAY_CALLBACK_URL + orderId,
         date: new Date(),
       };
 
       const qpayConfig = {
-        headers: { Authorization: `Bearer ${qpayAccessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       };
 
       let qpayInvoiceResponse: any;
@@ -159,15 +129,6 @@ router.post(
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
 
-      // const mbankInvoice = new Invoice({
-      //   orderId,
-      //   supplierId: order.supplierId,
-      //   merchantId: order.merchantId,
-      //   status: InvoiceStatus.Awaiting,
-      //   invoiceAmount,
-      //   paymentMethod: PaymentMethod.MBank,
-      // });
-
       const qpayInvoice = new Invoice({
         orderId,
         supplierId: order.supplierId,
@@ -177,12 +138,11 @@ router.post(
         paymentMethod: PaymentMethod.QPay,
         additionalData: {
           thirdPartyInvoiceId: qpayInvoiceId,
-          invoiceToken: qpayAccessToken,
+          invoiceToken: accessToken,
           thirdPartyData: qpayInvoiceResponseData,
         },
       });
 
-      // await mbankInvoice.save({ session });
       await qpayInvoice.save({ session });
 
       qpayInvoiceRequest.invoiceId = qpayInvoice.id;
