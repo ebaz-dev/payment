@@ -40,14 +40,20 @@ router.get("/invoice-status", async (req: Request, res: Response) => {
 
   const config: AxiosRequestConfig = {
     method: "post",
-    url: "https://merchant.qpay.mn/v2/payment/check",
+    url: QPAY_PAYMENT_CHECK_URL,
     headers: { Authorization: `Bearer ${invoice.additionalData.invoiceToken}` },
     data: data,
   };
 
+  console.log("----------------------------------------------");
+  console.log(config);
+  console.log("----------------------------------------------");
   try {
     const response = await axios(config);
-    // console.log(response.data);
+    console.log('RESPONSE DATA');
+    console.log(response.data);
+    console.log('RESPONSE DATA');
+
     if (response.status !== StatusCodes.OK) {
       return res
         .status(StatusCodes.BAD_REQUEST)
