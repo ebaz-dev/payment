@@ -15,21 +15,17 @@ const router = express.Router();
 router.get("/invoice-status", async (req: Request, res: Response) => {
   const invoiceId = req.query.invoice;
 
-  // if (!invoiceId || typeof invoiceId !== "string") {
-  //   return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
-  // }
-
   const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
 
   const invoice = await Invoice.findOne({
-    "additionalData.thirdPartyInvoiceId": invoiceId,
+    orderId: invoiceId,
     paymentMethod: PaymentMethod.QPay,
   });
 
   if (!invoice) {
     return res.status(StatusCodes.BAD_REQUEST).send("FAILURE");
   }
-  // console.log(invoice.additionalData);
+
   const data = {
     object_type: "INVOICE",
     object_id: invoice.additionalData.thirdPartyInvoiceId,
