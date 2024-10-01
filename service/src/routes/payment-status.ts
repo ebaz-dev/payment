@@ -14,6 +14,9 @@ const router = express.Router();
 
 router.get("/invoice-status", async (req: Request, res: Response) => {
   const invoiceId = req.query.invoice;
+  console.log('***********************************');
+  console.log(invoiceId);
+  console.log('***********************************');
 
   const QPAY_PAYMENT_CHECK_URL = "https://merchant.qpay.mn/v2/payment/check"
 
