@@ -149,14 +149,14 @@ router.post(
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
 
-      const mbankInvoice = new Invoice({
-        orderId,
-        supplierId: order.supplierId,
-        merchantId: order.merchantId,
-        status: InvoiceStatus.Awaiting,
-        invoiceAmount,
-        paymentMethod: PaymentMethod.MBank,
-      });
+      // const mbankInvoice = new Invoice({
+      //   orderId,
+      //   supplierId: order.supplierId,
+      //   merchantId: order.merchantId,
+      //   status: InvoiceStatus.Awaiting,
+      //   invoiceAmount,
+      //   paymentMethod: PaymentMethod.MBank,
+      // });
 
       const qpayInvoice = new Invoice({
         orderId,
@@ -172,7 +172,7 @@ router.post(
         },
       });
 
-      await mbankInvoice.save({ session });
+      // await mbankInvoice.save({ session });
       await qpayInvoice.save({ session });
 
       qpayInvoiceRequest.invoiceId = qpayInvoice.id;
