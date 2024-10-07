@@ -9,14 +9,11 @@ import {
 } from "../shared/models/invoice";
 import { InvoiceRequest } from "../shared/models/invoice-request";
 import { InvoiceCreatedPublisher } from "../events/publisher/invoice-created-publisher";
-import {
-  ThirdPartyExternalData,
-  PaymentThirdPartyOrigin,
-} from "../shared/models/third-party-token";
 import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
 import axios from "axios";
 import mongoose from "mongoose";
+import { qpayClient } from "../index";
 
 const router = express.Router();
 
@@ -56,7 +53,6 @@ router.post(
     session.startTransaction();
 
     const QPAY_INVOICE_CODE = process.env.QPAY_INVOICE_CODE!;
-    const QPAY_INVOICE_REQUEST_URL = process.env.QPAY_INVOICE_REQUEST_URL!;
     const QPAY_CALLBACK_URL = process.env.QPAY_CALLBACK_URL!;
 
     try {
@@ -77,16 +73,6 @@ router.post(
 
       await qpayInvoiceRequest.save({ session });
 
-      const qpayAccessTokenData = await ThirdPartyExternalData.findOne({
-        origin: PaymentThirdPartyOrigin.QPay,
-      });
-
-      const accessToken = qpayAccessTokenData?.token;
-
-      if (!accessToken) {
-        throw new BadRequestError("QPay access token not found");
-      }
-
       const qpayRequestData = {
         invoice_code: process.env.QPAY_INVOICE_CODE,
         sender_invoice_no: orderId,
@@ -97,17 +83,12 @@ router.post(
         date: new Date(),
       };
 
-      const qpayConfig = {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      };
-
       let qpayInvoiceResponse: any;
 
       try {
-        qpayInvoiceResponse = await axios.post(
-          QPAY_INVOICE_REQUEST_URL,
-          qpayRequestData,
-          qpayConfig
+        qpayInvoiceResponse = await qpayClient .post(
+          process.env.QPAY_INVOICE_REQUEST_URL!,
+          qpayRequestData
         );
       } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -138,7 +119,7 @@ router.post(
         paymentMethod: PaymentMethod.QPay,
         additionalData: {
           thirdPartyInvoiceId: qpayInvoiceId,
-          invoiceToken: accessToken,
+          invoiceToken: qpayClient.token,
           thirdPartyData: qpayInvoiceResponseData,
         },
       });

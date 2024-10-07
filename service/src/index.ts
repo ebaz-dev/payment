@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { app } from "./app";
 import { natsWrapper } from "./nats-wrapper";
+import { QpayClient } from "./shared/utils/qpay-api-client";
+
+export const qpayClient = new QpayClient();
 
 const start = async () => {
   if (!process.env.PORT) {
@@ -82,6 +85,10 @@ const start = async () => {
 
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to DB");
+
+    await qpayClient.getToken();
+    console.log("Token initialized at server startup.");
+
   } catch (err) {
     console.error(err);
   }

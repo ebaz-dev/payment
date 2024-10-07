@@ -41,6 +41,8 @@ spec:
               value: 'EBAZAAR'
             - name: QPAY_PASSWORD
               value: 'My7ZkVHq'
+            - name: QPAY_BASE_URI
+              value: 'https://merchant.qpay.mn/v2'
             - name: QPAY_INVOICE_CODE
               value: 'EBAZAAR_INVOICE'
             - name: QPAY_AUTH_TOKEN_URL
