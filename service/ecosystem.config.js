@@ -11,31 +11,34 @@ module.exports = {
         NODE_ENV: "development",
         PORT: PORTS.DEV.Payment,
         NATS_CLIENT_ID: process.env.PM2_INSTANCE_ID ? `payment-service-${process.env.PM2_INSTANCE_ID}` : 'payment-service',
-        ...ENVS.DEV,
+        PORT: '3000',
         QPAY_USERNAME: "EBAZAAR",
         QPAY_PASSWORD: "My7ZkVHq",
         QPAY_INVOICE_CODE: "EBAZAAR_INVOICE",
-        QPAY_BASE_URI: "https://merchant.qpay.mn/v2"
+        QPAY_BASE_URI: "https://merchant.qpay.mn/v2",
+        ...ENVS.DEV
       },
       env_stag: {
         NODE_ENV: "stag",
         PORT: PORTS.STAG.Payment,
         NATS_CLIENT_ID: process.env.PM2_INSTANCE_ID ? `payment-service-${process.env.PM2_INSTANCE_ID}` : 'payment-service',
-        ...ENVS.STAG,
+        PORT: '3000',
         QPAY_USERNAME: "EBAZAAR",
         QPAY_PASSWORD: "My7ZkVHq",
         QPAY_INVOICE_CODE: "EBAZAAR_INVOICE",
-        QPAY_BASE_URI: "https://merchant.qpay.mn/v2"
+        QPAY_BASE_URI: "https://merchant.qpay.mn/v2",
+        ...ENVS.STAG
       },
       env_production: {
         NODE_ENV: "production",
         PORT: PORTS.DEV.Payment,
         NATS_CLIENT_ID: process.env.PM2_INSTANCE_ID ? `payment-service-${process.env.PM2_INSTANCE_ID}` : 'payment-service',
-        ...ENVS.PROD,
+        PORT: '3000',
         QPAY_USERNAME: "EBAZAAR",
         QPAY_PASSWORD: "My7ZkVHq",
         QPAY_INVOICE_CODE: "EBAZAAR_INVOICE",
-        QPAY_BASE_URI: "https://merchant.qpay.mn/v2"
+        QPAY_BASE_URI: "https://merchant.qpay.mn/v2",
+        ...ENVS.PROD
       },
     },
   ],
