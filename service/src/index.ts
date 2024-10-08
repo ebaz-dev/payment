@@ -4,7 +4,8 @@ import { natsWrapper } from "./nats-wrapper";
 import { QpayClient } from "./shared/utils/qpay-api-client";
 
 export const qpayClient = new QpayClient();
-
+console.log(qpayClient);
+console.log('ffffffffffffff');
 const start = async () => {
   if (!process.env.PORT) {
     throw new Error("INDEX_PORT must be defined");

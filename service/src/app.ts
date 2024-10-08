@@ -8,8 +8,6 @@ import { paymemntStatusRouter } from "./routes/payment-status";
 import { qpayTokenUpdateRouter } from "./routes/third-party-token-get";
 import dotenv from "dotenv";
 import { healthRouter } from "./routes/health";
-import axios from "axios";
-import cron from "node-cron";
 
 dotenv.config();
 

@@ -28,7 +28,7 @@ export class QpayClient {
 
       const response: AxiosResponse<{ access_token: string }> = await axios.post(
         `${this.baseUri}${this.getTokenPath}`,
-        {}, // Empty body
+        {},
         { headers }
       );
 

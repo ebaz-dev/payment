@@ -13,7 +13,10 @@ import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
 import axios from "axios";
 import mongoose from "mongoose";
-import { qpayClient } from "../index";
+import { QpayClient } from "../shared/utils/qpay-api-client"
+// import { qpayClient } from "../index";
+
+const colaClient = new QpayClient();
 
 const router = express.Router();
 
@@ -86,7 +89,11 @@ router.post(
       let qpayInvoiceResponse: any;
 
       try {
-        qpayInvoiceResponse = await qpayClient .post(
+        // qpayInvoiceResponse = await qpayClient .post(
+        //   process.env.QPAY_INVOICE_REQUEST_URL!,
+        //   qpayRequestData
+        // );
+        qpayInvoiceResponse = await colaClient .post(
           process.env.QPAY_INVOICE_REQUEST_URL!,
           qpayRequestData
         );
@@ -119,7 +126,7 @@ router.post(
         paymentMethod: PaymentMethod.QPay,
         additionalData: {
           thirdPartyInvoiceId: qpayInvoiceId,
-          invoiceToken: qpayClient.token,
+          invoiceToken: colaClient.token,
           thirdPartyData: qpayInvoiceResponseData,
         },
       });
