@@ -13,7 +13,8 @@ import { Order } from "@ebazdev/order";
 import { natsWrapper } from "../nats-wrapper";
 import axios from "axios";
 import mongoose from "mongoose";
-import { QpayClient } from "../shared/utils/qpay-api-client"
+// import { QpayClient } from "../shared/utils/qpay-api-client"
+import { qpayClient } from "../shared/utils/qpay-client";
 
 const router = express.Router();
 
@@ -45,7 +46,9 @@ router.post(
 
     const order = await Order.findById(orderId);
 
-    const colaClient = new QpayClient();
+    // const colaClient = new QpayClient();
+    // console.log(qpayClient);
+    // console.log('*************************************');
 
     if (!order) {
       throw new BadRequestError("Order not found");
@@ -87,7 +90,7 @@ router.post(
       let qpayInvoiceResponse: any;
 
       try {
-        qpayInvoiceResponse = await colaClient.post(
+        qpayInvoiceResponse = await qpayClient.post(
           "/invoice",
           qpayRequestData
         );
@@ -110,7 +113,7 @@ router.post(
 
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
-
+console.log(qpayInvoiceResponseData);
       const qpayInvoice = new Invoice({
         orderId,
         supplierId: order.supplierId,
@@ -120,7 +123,7 @@ router.post(
         paymentMethod: PaymentMethod.QPay,
         additionalData: {
           thirdPartyInvoiceId: qpayInvoiceId,
-          invoiceToken: colaClient.token,
+          invoiceToken: qpayClient.token,
           thirdPartyData: qpayInvoiceResponseData,
         },
       });
