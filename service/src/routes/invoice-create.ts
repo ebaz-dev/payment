@@ -88,6 +88,9 @@ router.post(
         date: new Date(),
       };
       let qpayInvoiceResponse: any;
+      console.log('******************************');
+      console.log(qpayClient);
+      console.log('******************************');
 
       try {
         qpayInvoiceResponse = await qpayClient.post(
@@ -113,7 +116,7 @@ router.post(
 
       const qpayInvoiceResponseData = qpayInvoiceResponse.data;
       const qpayInvoiceId = qpayInvoiceResponseData.invoice_id;
-console.log(qpayInvoiceResponseData);
+      
       const qpayInvoice = new Invoice({
         orderId,
         supplierId: order.supplierId,
