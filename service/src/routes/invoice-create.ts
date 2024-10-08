@@ -14,9 +14,6 @@ import { natsWrapper } from "../nats-wrapper";
 import axios from "axios";
 import mongoose from "mongoose";
 import { QpayClient } from "../shared/utils/qpay-api-client"
-// import { qpayClient } from "../index";
-
-const colaClient = new QpayClient();
 
 const router = express.Router();
 
@@ -47,6 +44,8 @@ router.post(
     const { orderId, amount } = req.body;
 
     const order = await Order.findById(orderId);
+
+    const colaClient = new QpayClient();
 
     if (!order) {
       throw new BadRequestError("Order not found");
@@ -85,18 +84,14 @@ router.post(
         callback_url: QPAY_CALLBACK_URL + orderId,
         date: new Date(),
       };
-
       let qpayInvoiceResponse: any;
 
       try {
-        // qpayInvoiceResponse = await qpayClient .post(
-        //   process.env.QPAY_INVOICE_REQUEST_URL!,
-        //   qpayRequestData
-        // );
-        qpayInvoiceResponse = await colaClient .post(
-          process.env.QPAY_INVOICE_REQUEST_URL!,
+        qpayInvoiceResponse = await colaClient.post(
+          "/invoice",
           qpayRequestData
         );
+
       } catch (error) {
         if (axios.isAxiosError(error)) {
           console.error(
@@ -108,7 +103,6 @@ router.post(
         }
         throw new BadRequestError("Failed to create invoice with QPAY");
       }
-
       const qpayResponseStatus = qpayInvoiceResponse.status;
       if (qpayResponseStatus !== StatusCodes.OK) {
         throw new BadRequestError("Failed to create invoice with QPAY");

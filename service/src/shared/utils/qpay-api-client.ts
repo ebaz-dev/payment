@@ -16,7 +16,7 @@ export class QpayClient {
     private username: string = QPAY_USERNAME!,
     private password: string = QPAY_PASSWORD!
   ) {
-    this.scheduleTokenRefresh();
+    // this.scheduleTokenRefresh();
   }
 
   // Method to get a new token for the API
@@ -62,6 +62,7 @@ export class QpayClient {
 
     try {
       return await this.makeApiRequest(path, data);
+      // return await axios.post(`${this.baseUri}${path}`, data, qpayConfig);
     } catch (error: any) {
       if (error.response && error.response.status === 401) {
         // If a 401 is received, refresh the token and retry the request
@@ -82,15 +83,15 @@ export class QpayClient {
   ): Promise<AxiosResponse<any>> {
     return await axios.post(`${this.baseUri}${path}`, data, {
       headers: { Authorization: `Bearer ${this.token}` },
-      maxBodyLength: Infinity,
+      // maxBodyLength: Infinity,
     });
   }
 
   // Automatically refresh the token every 15 minutes
-  private scheduleTokenRefresh() {
-    this.refreshInterval = setInterval(async () => {
-      console.log("Refreshing QPay token...");
-      await this.getToken();
-    }, 14 * 60 * 1000);
-  }
+  // private scheduleTokenRefresh() {
+  //   this.refreshInterval = setInterval(async () => {
+  //     console.log("Refreshing QPay token...");
+  //     await this.getToken();
+  //   }, 14 * 60 * 1000);
+  // }
 }
