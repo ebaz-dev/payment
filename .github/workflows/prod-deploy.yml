@@ -1,0 +1,64 @@
+name: Deploy Payment Service - Prod
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE_NAME: payment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./service
+
+      - name: Log in to Docker Hub
+        run: echo '${{ secrets.DOCKER_PASSWORD }}' | docker login -u '${{ secrets.DOCKER_USERNAME }}' --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} ./service
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.K8S_PROD_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.K8S_HOST_PROD }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Docker Image
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.K8S_USER_PROD }}@${{ secrets.K8S_HOST_PROD }} << 'EOF'
+            set -e
+            REPO_DIR="/home/admin/github/${{ github.repository }}"
+            INFRA_DIR="/home/admin/github/${{ github.repository }}/service/k8s/prod"
+            if [ ! -d "$REPO_DIR" ]; then
+              echo "Repository not found. Cloning..."
+              git clone git@github.com:${{ github.repository }} $REPO_DIR
+            else
+              echo "Repository found. Pulling latest changes..."
+              cd $REPO_DIR
+              git pull
+            fi
+            cd $INFRA_DIR
+            kubectl apply -f ${{ env.SERVICE_NAME }}-depl.yaml
+            kubectl set image deployment/${{ env.SERVICE_NAME }}-depl ${{ env.SERVICE_NAME }}=${{secrets.DOCKER_USERNAME}}/${{ env.SERVICE_NAME }}:${{ github.sha }}  # Update the deployment image
+            kubectl annotate deployment ${{ env.SERVICE_NAME }}-depl kubernetes.io/change-cause="Updated image to $(date)" --overwrite  # Optional annotation
+            echo "Deployment completed."
+          EOF
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.K8S_PROD_PRIVATE_KEY }}

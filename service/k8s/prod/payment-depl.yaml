@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-depl
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec: 
+      containers:
+        - name: payment
+          image: ebazdev/payment:latest
+          imagePullPolicy: Always
+          env:
+            - name: MONGO_URI
+              value: 'mongodb://ebaz-pro:774CPXo65J8i@103.229.178.57:27017/ebaz-pro?directConnection=true'
+            - name: JWT_KEY
+              value: '279112db517a6fadbfbb53500ee5e142a9036f1c972739e895c0d3ff7aa84af3'
+            - name: NATS_URL
+              value: 'http://nats-srv:4222'
+            - name: NATS_CLUSTER_ID
+              value: 'ebazaar_prod'
+            - name: NATS_USER
+              value: 'nats_prod'
+            - name: NATS_PASS
+              value: 'NaTs@Prod$EBaz'
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name 
+            - name: PORT
+              value: '3000'
+            - name: NODE_ENV
+              value: 'production'
+            - name: QPAY_USERNAME
+              value: 'EBAZAAR'
+            - name: QPAY_PASSWORD
+              value: 'My7ZkVHq'
+            - name: QPAY_BASE_URI
+              value: 'https://merchant.qpay.mn/v2'
+            - name: QPAY_INVOICE_CODE
+              value: 'EBAZAAR_INVOICE'
+            - name: QPAY_AUTH_TOKEN_URL
+              value: 'https://merchant.qpay.mn/v2/auth/token'
+            - name: QPAY_INVOICE_REQUEST_URL
+              value: 'https://merchant.qpay.mn/v2/invoice'
+            - name: QPAY_PAYMENT_CHECK_URL
+              value: 'https://merchant.qpay.mn/v2/payment/check'
+            - name: QPAY_CALLBACK_URL
+              value: 'https://k8sapi-dev.ebazaar.mn/api/v1/payment/invoice-status?invoice='
+          readinessProbe:
+            httpGet:
+              path: /api/v1/payment/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/payment/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-srv
+spec:
+  selector:
+    app: payment
+  ports:
+    - name: payment
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
