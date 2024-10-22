@@ -44,6 +44,13 @@ router.post(
   async (req: Request, res: Response) => {
     const { orderId, amount } = req.body;
 
+      return res.status(StatusCodes.CREATED).json({
+        orderId: orderId,
+        data: "",
+        qr: "",
+        qrImage: "",
+      });
+
     const order = await Order.findById(orderId);
 
     // const colaClient = new QpayClient();
@@ -102,7 +109,7 @@ router.post(
         if (axios.isAxiosError(error)) {
           console.error(
             "Error during QPAY invoice request:",
-            error.response?.data || error.message
+            // error.response?.data || error.message
           );
         } else {
           console.error("Unexpected error:", error);
@@ -119,8 +126,8 @@ router.post(
       
       const qpayInvoice = new Invoice({
         orderId,
-        supplierId: order.supplierId,
-        merchantId: order.merchantId,
+        // supplierId: order.supplierId,
+        // merchantId: order.merchantId,
         status: InvoiceStatus.Awaiting,
         invoiceAmount,
         paymentMethod: PaymentMethod.QPay,
@@ -158,7 +165,7 @@ router.post(
     } catch (error) {
       await session.abortTransaction();
       if (error instanceof BadRequestError) {
-        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
+        // res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
       } else {
         console.error("Iinvoice requesting error:", error);
         res
